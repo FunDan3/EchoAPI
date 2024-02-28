@@ -23,5 +23,5 @@ setuptools.setup(
 	packages = setuptools.find_packages(where = "src"),
 	package_dir = {"": "src"},
 	python_requires = ">=3.8",
-	install_requires = ["pqcryptography", "aiohttp"] #Probably will add more later
+	install_requires = ["pqcryptography", "aiohttp", "hashlib"] #Probably will add more later
 )
