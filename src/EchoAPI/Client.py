@@ -4,6 +4,7 @@ import hashlib
 import aiohttp
 import asyncio
 import json
+import pickle
 
 from . import common
 from . import exceptions
@@ -85,13 +86,28 @@ class client:
 		self.public_key, self.private_key = pqc.encryption.generate_keypair(self.kem_algorithm)
 		self.public_sign, self.private_sign = pqc.signing.generate_signs(self.sig_algorithm)
 
-		login_json = {"login": self.login,
+		registration_json = {"login": self.login,
 			"token": self.token,
 			"kem_algorithm": self.kem_algorithm,
 			"sig_algorithm": self.sig_algorithm}
 
-		login_data = self.public_key+self.public_sign
-		await self.base_request_post("register", json_data = login_json, raw_data = login_data)
+		registration_data = self.public_key+self.public_sign
+		await self.base_request_post("register", json_data = registration_json, raw_data = registration_data)
+		await self.event.on_login_function()
+
+	def generate_container(self):
+		data = {"login": self.login,
+			"password": self.password,
+			"token": self.token,
+			"kem_algorithm": self.kem_algorithm,
+			"sig_algorithm": self.sig_algorithm,
+			"public_key": self.public_key,
+			"private_key": self.private_key,
+			"public_sign": self.public_sign,
+			"private_sign": self.public_sign}
+		data = pickle.dumps(data)
+		data = AES.encrypt(common.hash(self.password, "sha256").digest(), data)
+		return data
 
 	def start(self):
 		asyncio.run(self.connect())
