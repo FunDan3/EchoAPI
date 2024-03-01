@@ -12,7 +12,7 @@ from . import User
 from .event import event as event_creator
 
 class client:
-	login = None
+	usename = None
 	password = None
 	token = None
 	kem_algorithm = None
@@ -65,6 +65,20 @@ class client:
 			await self.verify_response(response)
 			return await response.read()
 
+	async def auth_request_post(self, path, json_data = None, raw_data = None):
+		if not json_data:
+			json_data = {}
+		json_data["token"] = self.token
+		json_data["login"] = self.usename
+		return await self.base_request_post(path, json_data, raw_data)
+
+	async def auth_request_get(self, path, json_data = None):
+		if not json_data:
+			json_data = {}
+		json_data["token"] = self.token
+		json_data["login"] = self.usename
+		return await self.base_request_get(path, json_data)
+
 	async def connect(self):
 		async with aiohttp.ClientSession() as session:
 			self.session = session
@@ -75,28 +89,52 @@ class client:
 			self.server_terms_and_conditions = self.server_terms_and_conditions.decode("utf-8")
 			await self.event.on_connected_function()
 
-	async def register(self, login, password, kem_algorithm = None, sig_algorithm = None):
+	async def register(self, usename, password, kem_algorithm = None, sig_algorithm = None, store_container_on_server = True):
 		if not kem_algorithm:
 			self.kem_algorithm = pqc.default_kem_algorithm
 		if not sig_algorithm:
 			self.sig_algorithm = pqc.default_sig_algorithm
-		self.login = login
+		self.usename = usename
 		self.password = password
-		self.token = common.hash(f"{login}{common.hash(password)}").hexdigest() #Attempt to hide password from server while still allowing for login by password and username. Password is used to encrypt container which may be stored on server.
+		self.token = common.hash(f"{usename}{common.hash(password).hexdigest()}").hexdigest() #Attempt to hide password from server while still allowing for login by password and username. Password is used to encrypt container which may be stored on server.
 		self.public_key, self.private_key = pqc.encryption.generate_keypair(self.kem_algorithm)
 		self.public_sign, self.private_sign = pqc.signing.generate_signs(self.sig_algorithm)
 
-		registration_json = {"login": self.login,
+		registration_json = {"login": self.usename,
 			"token": self.token,
 			"kem_algorithm": self.kem_algorithm,
 			"sig_algorithm": self.sig_algorithm}
 
 		registration_data = self.public_key+self.public_sign
 		await self.base_request_post("register", json_data = registration_json, raw_data = registration_data)
+		tasks = [self.event.on_login_function()]
+		if store_container_on_server:
+			tasks.append(self.store_container_on_server())
+		await asyncio.gather(*tasks)
+
+	async def login(self, usename, password, container = None):
+		self.usename = usename
+		self.password = password
+		self.token = common.hash(f"{usename}{common.hash(password).hexdigest()}").hexdigest() #Attempt to hide password from server while still allowing for login by password and username. Password is used to encrypt container which may be stored on server.
+		server_container = await self.auth_request_post("login", json_data = {"ReadContainer": ("yes" if not container else "no")})
+		self.load_container(container if container else server_container)
 		await self.event.on_login_function()
 
+	def load_container(self, container):
+		container = AES.decrypt(common.hash(self.password, "sha256").digest(), container)
+		container = pickle.loads(container)
+		for attribute, value in container.items():
+			self_value = getattr(self, attribute)
+			if self_value and self_value != value:
+				raise exceptions.DeceptiveServerError(f"Attribute {attribute} value of container doesnt match with client's value. Probably server is deceptive.")
+			setattr(self, attribute, value)
+
+	async def store_container_on_server(self):
+		encrypted_container = self.generate_container()
+		await self.auth_request_post("store_container", raw_data = encrypted_container)
+
 	def generate_container(self):
-		data = {"login": self.login,
+		data = {"usename": self.usename,
 			"password": self.password,
 			"token": self.token,
 			"kem_algorithm": self.kem_algorithm,
@@ -111,3 +149,4 @@ class client:
 
 	def start(self):
 		asyncio.run(self.connect())
+
