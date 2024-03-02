@@ -8,11 +8,13 @@ import pickle
 
 from . import common
 from . import exceptions
-from . import User
+from .User import User
 from .event import event as event_creator
 
 class client:
-	usename = None
+	user = None
+
+	username = None
 	password = None
 	token = None
 	kem_algorithm = None
@@ -69,14 +71,14 @@ class client:
 		if not json_data:
 			json_data = {}
 		json_data["token"] = self.token
-		json_data["login"] = self.usename
+		json_data["login"] = self.username
 		return await self.base_request_post(path, json_data, raw_data)
 
 	async def auth_request_get(self, path, json_data = None):
 		if not json_data:
 			json_data = {}
 		json_data["token"] = self.token
-		json_data["login"] = self.usename
+		json_data["login"] = self.username
 		return await self.base_request_get(path, json_data)
 
 	async def connect(self):
@@ -89,18 +91,17 @@ class client:
 			self.server_terms_and_conditions = self.server_terms_and_conditions.decode("utf-8")
 			await self.event.on_connected_function()
 
-	async def register(self, usename, password, kem_algorithm = None, sig_algorithm = None, store_container_on_server = True):
+	async def register(self, username, password, kem_algorithm = None, sig_algorithm = None, store_container_on_server = True):
 		if not kem_algorithm:
 			self.kem_algorithm = pqc.default_kem_algorithm
 		if not sig_algorithm:
 			self.sig_algorithm = pqc.default_sig_algorithm
-		self.usename = usename
+		self.username = username
 		self.password = password
-		self.token = common.hash(f"{usename}{common.hash(password).hexdigest()}").hexdigest() #Attempt to hide password from server while still allowing for login by password and username. Password is used to encrypt container which may be stored on server.
+		self.token = common.hash(f"{username}{common.hash(password).hexdigest()}").hexdigest() #Attempt to hide password from server while still allowing for login by password and username. Password is used to encrypt container which may be stored on server.
 		self.public_key, self.private_key = pqc.encryption.generate_keypair(self.kem_algorithm)
 		self.public_sign, self.private_sign = pqc.signing.generate_signs(self.sig_algorithm)
-
-		registration_json = {"login": self.usename,
+		registration_json = {"login": self.username,
 			"token": self.token,
 			"kem_algorithm": self.kem_algorithm,
 			"sig_algorithm": self.sig_algorithm}
@@ -111,13 +112,15 @@ class client:
 		if store_container_on_server:
 			tasks.append(self.store_container_on_server())
 		await asyncio.gather(*tasks)
+		self.user = await self.fetch_user(self.username)
 
-	async def login(self, usename, password, container = None):
-		self.usename = usename
+	async def login(self, username, password, container = None):
+		self.username = username
 		self.password = password
-		self.token = common.hash(f"{usename}{common.hash(password).hexdigest()}").hexdigest() #Attempt to hide password from server while still allowing for login by password and username. Password is used to encrypt container which may be stored on server.
+		self.token = common.hash(f"{username}{common.hash(password).hexdigest()}").hexdigest() #Attempt to hide password from server while still allowing for login by password and username. Password is used to encrypt container which may be stored on server.
 		server_container = await self.auth_request_post("login", json_data = {"ReadContainer": ("yes" if not container else "no")})
 		self.load_container(container if container else server_container)
+		self.user = await self.fetch_user(self.username)
 		await self.event.on_login_function()
 
 	def load_container(self, container):
@@ -134,7 +137,7 @@ class client:
 		await self.auth_request_post("store_container", raw_data = encrypted_container)
 
 	def generate_container(self):
-		data = {"usename": self.usename,
+		data = {"username": self.username,
 			"password": self.password,
 			"token": self.token,
 			"kem_algorithm": self.kem_algorithm,
@@ -147,6 +150,10 @@ class client:
 		data = AES.encrypt(common.hash(self.password, "sha256").digest(), data)
 		return data
 
+	async def fetch_user(username, self):
+		user = User(username, self)
+		await user.fetch_data()
+		return user
 	def start(self):
 		asyncio.run(self.connect())
 
