@@ -138,7 +138,6 @@ class client:
 
 	def generate_container(self):
 		data = {"username": self.username,
-			"password": self.password,
 			"token": self.token,
 			"kem_algorithm": self.kem_algorithm,
 			"sig_algorithm": self.sig_algorithm,
