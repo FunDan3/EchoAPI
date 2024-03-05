@@ -11,7 +11,7 @@ from . import exceptions
 from .User import User
 from .event import event as event_creator
 
-class client:
+class Client:
 	user = None
 
 	username = None
@@ -93,21 +93,29 @@ class client:
 
 	async def register(self, username, password, kem_algorithm = None, sig_algorithm = None, store_container_on_server = True):
 		if not kem_algorithm:
-			self.kem_algorithm = pqc.default_kem_algorithm
+			kem_algorithm = pqc.default_kem_algorithm
 		if not sig_algorithm:
-			self.sig_algorithm = pqc.default_sig_algorithm
+			sig_algorithm = pqc.default_sig_algorithm
+		token = common.hash(f"{username}{common.hash(password).hexdigest()}").hexdigest() #Attempt to hide password from server while still allowing for login by password and username. Password is used to encrypt container which may be stored on server. Probably should use TOTP or smth later...
+		public_key, private_key = pqc.encryption.generate_keypair(kem_algorithm)
+		public_sign, private_sign = pqc.signing.generate_signs(sig_algorithm)
+		registration_json = {"login": username,
+			"token": token,
+			"kem_algorithm": kem_algorithm,
+			"sig_algorithm": sig_algorithm}
+
+		registration_data = public_key+public_sign
+		await self.base_request_post("register", json_data = registration_json, raw_data = registration_data)
 		self.username = username
 		self.password = password
-		self.token = common.hash(f"{username}{common.hash(password).hexdigest()}").hexdigest() #Attempt to hide password from server while still allowing for login by password and username. Password is used to encrypt container which may be stored on server.
-		self.public_key, self.private_key = pqc.encryption.generate_keypair(self.kem_algorithm)
-		self.public_sign, self.private_sign = pqc.signing.generate_signs(self.sig_algorithm)
-		registration_json = {"login": self.username,
-			"token": self.token,
-			"kem_algorithm": self.kem_algorithm,
-			"sig_algorithm": self.sig_algorithm}
+		self.token = token
+		self.kem_algorithm = kem_algorithm
+		self.sig_algorithm = sig_algorithm
+		self.public_key = public_key
+		self.private_key = private_key
+		self.public_sign = public_sign
+		self.private_sign = private_sign
 
-		registration_data = self.public_key+self.public_sign
-		await self.base_request_post("register", json_data = registration_json, raw_data = registration_data)
 		tasks = [self.event.on_login_function()]
 		if store_container_on_server:
 			tasks.append(self.store_container_on_server())
@@ -129,6 +137,7 @@ class client:
 		for attribute, value in container.items():
 			self_value = getattr(self, attribute)
 			if self_value and self_value != value:
+				print(str(self_value) + "\n"*10 + str(value))
 				raise exceptions.DeceptiveServerError(f"Attribute {attribute} value of container doesnt match with client's value. Probably server is deceptive.")
 			setattr(self, attribute, value)
 

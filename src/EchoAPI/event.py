@@ -1,13 +1,15 @@
 from . import exceptions
 
+async def on_connected_function():
+	pass
+async def on_login_function():
+	pass
+
+
 class event:
 	on_connected_function = None
 	on_login_function = None
 	def __init__(self):
-		async def on_connected_function(self):
-			pass
-		async def on_login_function(self):
-			pass
 		self.on_connected_function = on_connected_function
 		self.on_login_function = on_login_function
 

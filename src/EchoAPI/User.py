@@ -2,6 +2,8 @@ import asyncio
 import json
 import pqcryptography as pqc
 
+from . import Message
+
 class User:
 	username = None
 	client = None
@@ -26,3 +28,9 @@ class User:
 			self.kem_algorithm = json_data["kem_algorithm"]
 			self.sig_algorithm = json_data["sig_algorithm"]
 		await asyncio.gather(fetch_keys())
+
+	async def send_dm(self, message):
+		if type(message) in [bytes, list, dict, str]:
+			message = Message(message)
+		message.recipient = self
+		await message.send()

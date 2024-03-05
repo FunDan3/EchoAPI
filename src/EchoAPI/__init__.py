@@ -1,1 +1,2 @@
-from .Client import *
+from .Client import Client
+from .Message import Message
