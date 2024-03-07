@@ -106,6 +106,7 @@ class Client:
 
 		registration_data = public_key+public_sign
 		await self.base_request_post("register", json_data = registration_json, raw_data = registration_data)
+
 		self.username = username
 		self.password = password
 		self.token = token
@@ -137,7 +138,6 @@ class Client:
 		for attribute, value in container.items():
 			self_value = getattr(self, attribute)
 			if self_value and self_value != value:
-				print(str(self_value) + "\n"*10 + str(value))
 				raise exceptions.DeceptiveServerError(f"Attribute {attribute} value of container doesnt match with client's value. Probably server is deceptive.")
 			setattr(self, attribute, value)
 
@@ -162,6 +162,12 @@ class Client:
 		user = User(username, self)
 		await user.fetch_data()
 		return user
+
+	async def _index_inbox(self):
+		index = await self.auth_request_get("/index_inbox")
+		index = json.loads(index)
+		return index
+
 	def start(self):
 		asyncio.run(self.connect())
 
