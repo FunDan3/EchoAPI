@@ -10,6 +10,7 @@ from . import common
 from . import exceptions
 from .User import User
 from .event import event as event_creator
+from .Message import IngoingMessage
 
 class Client:
 	user = None
@@ -30,13 +31,15 @@ class Client:
 	server_privacy_policy = None
 	server_terms_and_conditions = None
 	event_creator = None
+
+	inbox = None
 	def __init__(self, server_addr = None):
 		if not server_addr:
 			server_addr = "https://foxomet.ru:23515/"
 		server_addr = ("https://" if not server_addr.startswith("http") else "") + server_addr + ("/" if not server_addr.endswith("/") else "")
 		self.server_addr = server_addr
 		self.event = event_creator()
-
+		self.inbox = {}
 
 	async def verify_response(self, response):
 		if response.status not in range(200, 300): #if not successful:
@@ -117,7 +120,7 @@ class Client:
 		self.public_sign = public_sign
 		self.private_sign = private_sign
 
-		tasks = [self.event.on_login_function()]
+		tasks = [self.message_loop(), self.event.on_login_function()]
 		if store_container_on_server:
 			tasks.append(self.store_container_on_server())
 		await asyncio.gather(*tasks)
@@ -130,7 +133,7 @@ class Client:
 		server_container = await self.auth_request_post("login", json_data = {"ReadContainer": ("yes" if not container else "no")})
 		self.load_container(container if container else server_container)
 		self.user = await self.fetch_user(self.username)
-		await self.event.on_login_function()
+		await asyncio.gather(self.message_loop(), self.event.on_login_function())
 
 	def load_container(self, container):
 		container = AES.decrypt(common.hash(self.password, "sha256").digest(), container)
@@ -167,6 +170,33 @@ class Client:
 		index = await self.auth_request_get("/index_inbox")
 		index = json.loads(index)
 		return index
+
+	async def message_loop(self):
+		def generate_messages(count, author):
+			local_messages = []
+			for _ in range(count):
+				local_messages.append(IngoingMessage(self, author))
+			return local_messages
+		while True:
+			new_inbox = await self._index_inbox()
+			messages = []
+			for author, message_count in new_inbox.items():
+				if author in self.inbox:
+					new_message_count = new_inbox[author] - self.inbox[author]
+					if new_message_count > 0:
+						messages += generate_messages(new_message_count, author)
+				else:
+					messages += generate_messages(message_count, author)
+			self.inbox = new_inbox
+			tasks = []
+			for message in messages:
+				tasks.append(message.load())
+			await asyncio.gather(*tasks)
+
+			for message in messages:
+				await self.event.on_message_function(message)
+
+			await asyncio.sleep(2)
 
 	def start(self):
 		asyncio.run(self.connect())

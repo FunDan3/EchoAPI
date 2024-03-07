@@ -1,2 +1,2 @@
 from .Client import Client
-from .Message import Message
+from .Message import OutgoingMessage as Message

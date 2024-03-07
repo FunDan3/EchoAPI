@@ -14,7 +14,16 @@ def process_content(content):
 	else:
 		raise UnrecognizedContentType(f"Client doenst know how to interprete '{t}' content type")
 
-class Message:
+class IngoingMessage:
+	author = None
+	client = None
+	def __init__(self, client, author_username):
+		self.author = author_username
+		self.client = client
+	async def load(self):
+		self.author = await self.client.fetch_user(self.author)
+
+class OutgoingMessage: #outgoing
 	recipient = None
 	content_type = None
 	content = None
