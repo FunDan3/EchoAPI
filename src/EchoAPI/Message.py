@@ -28,7 +28,6 @@ class IngoingMessage:
 		self.author = await self.client.fetch_user(self.author)
 	async def read(self):
 		raw_content = await self.client.auth_request_get("./read_direct_message", json_data = {"username": self.author.username})
-		print(raw_content)
 		raw_content = raw_content.split(b"\n", 1)
 		json_data = json.loads(raw_content[0])
 		self.sent_at = json_data["sent_time"]
@@ -41,7 +40,7 @@ class IngoingMessage:
 		type = split_type[0]
 		if len(split_type) == 2:
 			self.content = self.content.decode(split_type[1])
-		self.metadata = common.folder(message_json["Metadata"])
+		self.metadata = common.folder(**message_json["Metadata"])
 
 class OutgoingMessage: #outgoing
 	recipient = None

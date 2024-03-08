@@ -158,13 +158,13 @@ class Client:
 			"public_key": self.public_key,
 			"private_key": self.private_key,
 			"public_sign": self.public_sign,
-			"private_sign": self.public_sign}
+			"private_sign": self.private_sign}
 		data = pickle.dumps(data)
 		data = AES.encrypt(common.hash(self.password, "sha256").digest(), data)
 		return data
 
-	async def fetch_user(username, self):
-		user = User(username, self)
+	async def fetch_user(self, username):
+		user = User(self, username)
 		await user.fetch_data()
 		return user
 
