@@ -100,8 +100,10 @@ class Client:
 		if not sig_algorithm:
 			sig_algorithm = pqc.default_sig_algorithm
 		token = common.hash(f"{username}{common.hash(password).hexdigest()}").hexdigest() #Attempt to hide password from server while still allowing for login by password and username. Password is used to encrypt container which may be stored on server. Probably should use TOTP or smth later...
+
 		public_key, private_key = pqc.encryption.generate_keypair(kem_algorithm)
 		public_sign, private_sign = pqc.signing.generate_signs(sig_algorithm)
+
 		registration_json = {"login": username,
 			"token": token,
 			"kem_algorithm": kem_algorithm,

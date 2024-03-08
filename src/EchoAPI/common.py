@@ -8,3 +8,8 @@ def hash(data, algorithm = None):
 	hash = hashlib.new(algorithm)
 	hash.update(data)
 	return hash
+
+class folder:
+	def __init__(self, **kwargs):
+		for key, value in kwargs.items():
+			setattr(self, key, value)
