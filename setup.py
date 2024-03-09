@@ -4,7 +4,7 @@ with open("README.md", "r") as f:
 	long_description = f.read()
 
 setuptools.setup(
-	name = "EchoAPI",
+	name = "EchoMessagerAPI",
 	version = "0.0.1",
 	author = "Fun_Dan3",
 	author_email = "dfr34560@gmail.com",
