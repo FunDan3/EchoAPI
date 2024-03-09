@@ -5,7 +5,7 @@ with open("README.md", "r") as f:
 
 setuptools.setup(
 	name = "EchoMessagerAPI",
-	version = "0.0.1",
+	version = "0.0.2",
 	author = "Fun_Dan3",
 	author_email = "dfr34560@gmail.com",
 	description = "API to access EchoServer post-quantum messager.",
@@ -23,5 +23,5 @@ setuptools.setup(
 	packages = setuptools.find_packages(where = "src"),
 	package_dir = {"": "src"},
 	python_requires = ">=3.8",
-	install_requires = ["pqcryptography", "aiohttp", "hashlib"] #Probably will add more later
+	install_requires = ["pqcryptography", "aiohttp"]
 )
