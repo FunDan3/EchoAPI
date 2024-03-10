@@ -33,6 +33,8 @@ class Client:
 	event_creator = None
 
 	inbox = None
+
+	interface_version = "0.0.1" # Version of server-client interface.
 	def __init__(self, server_addr = None):
 		if not server_addr:
 			server_addr = "https://foxomet.ru:23515/"
@@ -84,9 +86,15 @@ class Client:
 		json_data["login"] = self.username
 		return await self.base_request_get(path, json_data)
 
-	async def connect(self):
+	async def connect(self, ignore_incompatible_server = False):
 		async with aiohttp.ClientSession() as session:
 			self.session = session
+
+			server_info = json.loads(await self.base_request_get("EchoMessagerServerInfo"))
+
+			if server_info["version"] != self.interface_version and not ignore_incompatible_server:
+				raise exceptions.IncompatibleServerException(f"Client's version is {self.interface_version}, and server's version is {server_info['version']}")
+
 			self.server_privacy_policy, self.server_terms_and_conditions = await asyncio.gather(
 				self.base_request_get("ReadPrivacyPolicy"),
 				self.base_request_get("ReadTermsAndConditions"))
@@ -200,6 +208,6 @@ class Client:
 
 			await asyncio.sleep(2)
 
-	def start(self):
-		asyncio.run(self.connect())
+	def start(self, ignore_incompatible_server = False):
+		asyncio.run(self.connect(ignore_incompatible_server))
 

@@ -6,3 +6,5 @@ class DeceptiveServerError(Exception):
 	pass
 class UnrecoginzedContentType(Exception):
 	pass
+class IncompatibleServerException(Exception):
+	pass
