@@ -3,8 +3,8 @@ from pqcryptography import AES
 import hashlib
 import aiohttp
 import asyncio
-import json
 import pickle
+import json
 
 from . import common
 from . import exceptions
@@ -34,6 +34,8 @@ class Client:
 
 	inbox = None
 
+	users_cache = None
+
 	interface_version = "0.0.1" # Version of server-client interface.
 	def __init__(self, server_addr = None):
 		if not server_addr:
@@ -41,6 +43,7 @@ class Client:
 		server_addr = ("https://" if not server_addr.startswith("http") else "") + server_addr + ("/" if not server_addr.endswith("/") else "")
 		self.server_addr = server_addr
 		self.event = event_creator()
+		self.users_cache = {}
 		self.inbox = {}
 
 	async def verify_response(self, response):
@@ -172,8 +175,12 @@ class Client:
 		return data
 
 	async def fetch_user(self, username):
-		user = User(self, username)
-		await user.fetch_data()
+		if username not in self.users_cache:
+			user = User(self, username)
+			await user.fetch_data()
+			self.users_cache[username] = user
+		else:
+			user = self.users_cache[username]
 		return user
 
 	async def _index_inbox(self):
