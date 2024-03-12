@@ -198,6 +198,7 @@ class Client:
 			new_inbox = await self._index_inbox()
 			messages = []
 			for author, message_count in new_inbox.items():
+				await self.fetch_user(author) # To add to cache
 				if author in self.inbox:
 					new_message_count = new_inbox[author] - self.inbox[author]
 					if new_message_count > 0:
