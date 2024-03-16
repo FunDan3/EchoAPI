@@ -188,7 +188,7 @@ class Client:
 		index = json.loads(index)
 		return index
 
-	async def message_loop(self):
+	async def message_once(self):
 		def generate_messages(count, author):
 			local_messages = []
 			for _ in range(count):
@@ -215,6 +215,10 @@ class Client:
 				await self.event.on_message_function(message)
 
 			await asyncio.sleep(2)
+
+	async def message_loop(self):
+		while True:
+			await asyncio.gather(self.message_once, asyncio.sleep(2))
 
 	def start(self, ignore_incompatible_server = False):
 		asyncio.run(self.connect(ignore_incompatible_server))
