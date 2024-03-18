@@ -5,7 +5,7 @@ with open("README.md", "r") as f:
 
 setuptools.setup(
 	name = "EchoMessagerAPI",
-	version = "0.0.6",
+	version = "0.0.7",
 	author = "Fun_Dan3",
 	author_email = "dfr34560@gmail.com",
 	description = "API to access EchoServer post-quantum messager.",
