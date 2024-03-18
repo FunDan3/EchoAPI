@@ -36,6 +36,6 @@ class User:
 
 	async def send_dm(self, message):
 		if type(message) in [bytes, list, dict, str]:
-			message = Message(message)
+			message = Message.OutgoingMessage(message)
 		message.recipient = self
 		await message.send()

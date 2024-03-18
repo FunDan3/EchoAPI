@@ -42,7 +42,7 @@ class IngoingMessage:
 			self.content = self.content.decode(split_type[1])
 		self.metadata = common.folder(**message_json["Metadata"])
 
-class OutgoingMessage: #outgoing
+class OutgoingMessage:
 	recipient = None
 	content_type = None
 	content = None
