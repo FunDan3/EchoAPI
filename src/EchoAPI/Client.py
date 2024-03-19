@@ -136,8 +136,8 @@ class Client:
 		tasks = [self.message_loop(), self.event.on_login_function()]
 		if store_container_on_server:
 			tasks.append(self.store_container_on_server())
-		await asyncio.gather(*tasks)
 		self.user = await self.fetch_user(self.username)
+		await asyncio.gather(*tasks)
 
 	async def login(self, username, password, container = None):
 		self.username = username
@@ -214,11 +214,9 @@ class Client:
 			for message in messages:
 				await self.event.on_message_function(message)
 
-			await asyncio.sleep(2)
-
 	async def message_loop(self):
 		while True:
-			await asyncio.gather(self.message_once, asyncio.sleep(2))
+			await asyncio.gather(asyncio.sleep(2), self.message_once())
 
 	def start(self, ignore_incompatible_server = False):
 		asyncio.run(self.connect(ignore_incompatible_server))
